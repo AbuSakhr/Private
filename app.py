@@ -9,7 +9,7 @@ app = Flask(__name__, static_folder='static')
 
 LICENSE_FILE = 'licenses.json'
 
-# تحميل التراخيص من ملف عند بدء التشغيل
+# تحميل التراخيص من ملف
 def load_licenses():
     if os.path.exists(LICENSE_FILE):
         with open(LICENSE_FILE, 'r') as f:
@@ -21,6 +21,7 @@ def save_licenses():
     with open(LICENSE_FILE, 'w') as f:
         json.dump(licenses, f, indent=2)
 
+# تحميل التراخيص عند بدء التشغيل
 licenses = load_licenses()
 
 @app.route('/')
@@ -71,7 +72,7 @@ def generate():
         "device_id": device_id or None
     }
 
-    encoded = base64.b64encode(str(license_info).encode()).decode()
+    encoded = base64.b64encode(json.dumps(license_info).encode()).decode()
     licenses[key] = license_info
     save_licenses()
 
@@ -84,13 +85,21 @@ def verify():
     device_id = data.get('device_id')
 
     try:
-        decoded = base64.b64decode(encoded).decode()
-        for key, value in licenses.items():
-            if key in decoded:
-                if value.get("device_id") and value["device_id"] != device_id:
-                    return jsonify({"valid": False, "error": "Device mismatch"})
-                return jsonify({"valid": True, "info": value})
-        return jsonify({"valid": False, "error": "Invalid key"})
+        decoded_json = base64.b64decode(encoded).decode()
+        decoded_data = json.loads(decoded_json)
+
+        key = decoded_data.get("ActivationCode")
+
+        if not key or key not in licenses:
+            return jsonify({"valid": False, "error": "License not found"})
+
+        license_data = licenses[key]
+
+        if license_data.get("device_id") and license_data["device_id"] != device_id:
+            return jsonify({"valid": False, "error": "Device mismatch"})
+
+        return jsonify({"valid": True, "info": license_data})
+
     except Exception as e:
         return jsonify({"valid": False, "error": str(e)})
 
