@@ -2,10 +2,26 @@ from flask import Flask, request, jsonify, send_from_directory
 from datetime import datetime, timedelta
 import base64
 import uuid
+import json
+import os
 
 app = Flask(__name__, static_folder='static')
 
-licenses = {}
+LICENSE_FILE = 'licenses.json'
+
+# تحميل التراخيص من ملف عند بدء التشغيل
+def load_licenses():
+    if os.path.exists(LICENSE_FILE):
+        with open(LICENSE_FILE, 'r') as f:
+            return json.load(f)
+    return {}
+
+# حفظ التراخيص في ملف
+def save_licenses():
+    with open(LICENSE_FILE, 'w') as f:
+        json.dump(licenses, f, indent=2)
+
+licenses = load_licenses()
 
 @app.route('/')
 def index():
@@ -29,6 +45,9 @@ def activate():
         return jsonify({"error": "license already used on another device"}), 403
 
     license_data["device_id"] = device_id
+    licenses[code] = license_data
+    save_licenses()
+
     return jsonify({"message": "License activated successfully", "code": code})
 
 @app.route('/api/generate', methods=['POST'])
@@ -36,6 +55,7 @@ def generate():
     data = request.json
     hours = int(data.get('hours', 0))
     days = int(data.get('days', 0))
+    device_id = data.get("device_id")
 
     key = str(uuid.uuid4()).upper()
     start = datetime.now()
@@ -48,11 +68,13 @@ def generate():
         "validDays": days + (hours / 24),
         "Item_id": str(uuid.uuid4())[:8],
         "purchasecode": base64.urlsafe_b64encode(uuid.uuid4().bytes).decode('utf-8'),
-        "device_id": None
+        "device_id": device_id or None
     }
 
     encoded = base64.b64encode(str(license_info).encode()).decode()
     licenses[key] = license_info
+    save_licenses()
+
     return jsonify({"license": encoded, "details": license_info})
 
 @app.route('/api/verify', methods=['POST'])
