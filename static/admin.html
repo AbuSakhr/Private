@@ -1,41 +1,146 @@
-<!DOCTYPE html>
-<html lang="ar">
+<!DOCTYPE html><html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>توليد كود ترخيص</title>
+  <title>مولّد وفاحص أكواد الترخيص</title>
   <style>
-    body { font-family: sans-serif; direction: rtl; padding: 20px; }
-    input, button { margin: 10px 0; padding: 5px; font-size: 16px; }
-    pre { background: #f2f2f2; padding: 10px; white-space: pre-wrap; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #e0f7fa, #fce4ec);
+      color: #333;
+      padding: 30px;
+      direction: rtl;
+    }
+    h2 {
+      color: #00695c;
+      margin-top: 40px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: bold;
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    button {
+      background: #00796b;
+      color: white;
+      border: none;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #004d40;
+    }
+    .output {
+      background: #f1f8e9;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px dashed #8bc34a;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    hr {
+      border: none;
+      border-top: 2px dashed #ccc;
+      margin: 40px 0;
+    }
   </style>
 </head>
 <body>
-  <h1>توليد كود ترخيص</h1>
+  <h2>🔐 توليد كود مشفر مع وقت مخصص</h2><label>🔑 كود التفعيل</label> <input type="text" id="codeInput" placeholder="مثال: 42FA-E2A9-..." />
 
-  <form id="form">
-    <label>عدد الأيام: <input type="number" id="days" value="1"></label><br>
-    <label>عدد الساعات: <input type="number" id="hours" value="0"></label><br>
-    <button type="submit">توليد</button>
-  </form>
+<label>🕒 وقت البدء</label> <input type="datetime-local" id="startDateTime" />
 
-  <pre id="output">🔑 عند توليد كود سيظهر هنا ...</pre>
+<label>🕓 وقت الانتهاء</label> <input type="datetime-local" id="endDateTime" />
 
-  <script>
-    document.getElementById('form').onsubmit = async (e) => {
-      e.preventDefault();
-      const days = document.getElementById('days').value;
-      const hours = document.getElementById('hours').value;
+<button onclick="generateCode()">✨ توليد الكود المشفر</button>
 
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ days, hours })
-      });
+<label>📦 الكود المشفر</label>
 
-      const data = await res.json();
-      document.getElementById('output').innerText =
-        `🔐 كود الترخيص المشفر:\n${data.license}\n\n📋 تفاصيل الكود:\n${JSON.stringify(data.details, null, 2)}`;
-    };
-  </script>
-</body>
+  <textarea class="output" id="encodedOutput" rows="4" readonly></textarea>  <hr>  <h2>🧩 تحليل كود مشفر</h2><label>📥 أدخل الكود المشفر</label>
+
+  <textarea id="decodeInput" placeholder="ألصق الكود هنا..." rows="4"></textarea><button onclick="decodeCode()">🔍 تحليل الكود</button>
+
+  <div class="output" id="decodedDetails"></div>  <script>
+    function generateCode() {
+      const code = document.getElementById('codeInput').value.trim();
+      const startInput = document.getElementById('startDateTime').value;
+      const endInput = document.getElementById('endDateTime').value;
+
+      if (!code || !startInput || !endInput) {
+        alert('يرجى إدخال الكود وتحديد وقتي البدء والانتهاء!');
+        return;
+      }
+
+      const startDate = new Date(startInput);
+      const endDate = new Date(endInput);
+
+      if (endDate <= startDate) {
+        alert('وقت الانتهاء يجب أن يكون بعد وقت البدء!');
+        return;
+      }
+
+      const durationMs = endDate - startDate;
+      const durationDays = +(durationMs / (1000 * 60 * 60 * 24)).toFixed(5);
+
+      const payload = {
+        ActivationCode: code,
+        StartDate: startDate.toISOString(),
+        EndDate: endDate.toISOString(),
+        validDays: durationDays,
+        Item_id: Math.floor(Math.random() * 90000000) + 10000000,
+        purchasecode: generateRandomToken(64)
+      };
+
+      const jsonStr = JSON.stringify(payload);
+      const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
+      document.getElementById('encodedOutput').value = base64;
+    }
+
+    function decodeCode() {
+      const input = document.getElementById('decodeInput').value.trim();
+      const output = document.getElementById('decodedDetails');
+      try {
+        const jsonStr = decodeURIComponent(escape(atob(input)));
+        const obj = JSON.parse(jsonStr);
+        const start = new Date(obj.StartDate);
+        const end = new Date(obj.EndDate);
+        const diffMs = end - start;
+        const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+        output.innerText =
+          `🔑 كود التفعيل: ${obj.ActivationCode}\n` +
+          `📅 وقت البدء: ${start.toLocaleString()}\n` +
+          `📅 وقت الانتهاء: ${end.toLocaleString()}\n` +
+          `⏳ مدة الكود: ${days} يوم، ${hours} ساعة، ${minutes} دقيقة\n` +
+          `🧾 رقم العنصر: ${obj.Item_id}\n` +
+          `🔐 رمز الشراء: ${obj.purchasecode}`;
+      } catch (e) {
+        output.innerText = '⚠️ الكود غير صالح أو غير قابل للتحليل.';
+      }
+    }
+
+    function generateRandomToken(length) {
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      let result = "";
+      for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    }
+
+    // تعبئة الوقت المبدئي
+    const now = new Date();
+    const inOneHour = new Date(now.getTime() + 3600000);
+    document.getElementById('startDateTime').value = now.toISOString().slice(0,16);
+    document.getElementById('endDateTime').value = inOneHour.toISOString().slice(0,16);
+  </script></body>
 </html>
