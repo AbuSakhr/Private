@@ -1,13 +1,17 @@
-# License Server API باستخدام Python Flask
-
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from datetime import datetime, timedelta
 import uuid
+import os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static")
 
 # قاعدة بيانات مؤقتة في الذاكرة
 licenses = {}
+
+# الصفحة الرئيسية تعرض واجهة HTML
+@app.route('/')
+def index():
+    return send_from_directory('static', 'admin.html')
 
 # توليد كود ترخيص جديد
 @app.route('/api/generate', methods=['POST'])
@@ -72,7 +76,7 @@ def activate_license():
 
     return jsonify({'status': 'activated', 'code': code})
 
-# فحص الحالة
+# عرض حالة كود
 @app.route('/api/status/<code>', methods=['GET'])
 def status(code):
     if code not in licenses:
@@ -88,4 +92,5 @@ def status(code):
     })
 
 if __name__ == '__main__':
+    os.makedirs('static', exist_ok=True)
     app.run(debug=True, port=5000)
