@@ -1,88 +1,79 @@
 <!DOCTYPE html><html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>مولّد وفاحص أكواد الترخيص</title>
+  <title>لوحة توليد كود تفعيل لجهاز واحد</title>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(to right, #e0f7fa, #fce4ec);
-      color: #333;
+      background: #f7f9fc;
+      color: #222;
       padding: 30px;
       direction: rtl;
+      max-width: 700px;
+      margin: auto;
     }
     h2 {
-      color: #00695c;
-      margin-top: 40px;
+      color: #0d47a1;
+      border-bottom: 2px solid #90caf9;
+      padding-bottom: 5px;
     }
     label {
       display: block;
-      margin: 10px 0 5px;
+      margin-top: 15px;
       font-weight: bold;
     }
     input, textarea, button {
       width: 100%;
       padding: 10px;
-      margin-bottom: 15px;
-      border-radius: 8px;
+      margin-top: 5px;
+      margin-bottom: 20px;
+      border-radius: 6px;
       border: 1px solid #ccc;
-      box-sizing: border-box;
-      font-size: 16px;
+      font-size: 15px;
     }
     button {
-      background: #00796b;
+      background-color: #1565c0;
       color: white;
+      cursor: pointer;
       border: none;
-      transition: background 0.3s;
     }
     button:hover {
-      background: #004d40;
+      background-color: #0d47a1;
     }
     .output {
-      background: #f1f8e9;
+      background-color: #e3f2fd;
+      border: 1px dashed #64b5f6;
       padding: 15px;
-      border-radius: 8px;
-      border: 1px dashed #8bc34a;
+      border-radius: 6px;
       white-space: pre-wrap;
-      word-break: break-word;
-    }
-    hr {
-      border: none;
-      border-top: 2px dashed #ccc;
-      margin: 40px 0;
     }
   </style>
 </head>
 <body>
-  <h2>🔐 توليد كود مشفر مع وقت مخصص</h2><label>🔑 كود التفعيل</label> <input type="text" id="codeInput" placeholder="مثال: 42FA-E2A9-..." />
+  <h2>🎯 توليد كود تفعيل خاص بمعرف جهاز</h2><label>📛 أدخل معرف الجهاز (device ID) الذي أرسله العميل</label> <input type="text" id="deviceIdInput" placeholder="مثال: 42FA-E2A9-..." />
 
-<label>🕒 وقت البدء</label> <input type="datetime-local" id="startDateTime" />
+<label>🕓 وقت الانتهاء (تاريخ ووقت)</label> <input type="datetime-local" id="endDateTime" />
 
-<label>🕓 وقت الانتهاء</label> <input type="datetime-local" id="endDateTime" />
+<button onclick="generateActivationCode()">🔐 توليد كود التفعيل</button>
 
-<button onclick="generateCode()">✨ توليد الكود المشفر</button>
+<label>📦 الكود المشفر الجاهز للإرسال للعميل</label>
 
-<label>📦 الكود المشفر</label>
-
-  <textarea class="output" id="encodedOutput" rows="4" readonly></textarea>  <hr>  <h2>🧩 تحليل كود مشفر</h2><label>📥 أدخل الكود المشفر</label>
-
-  <textarea id="decodeInput" placeholder="ألصق الكود هنا..." rows="4"></textarea><button onclick="decodeCode()">🔍 تحليل الكود</button>
-
-  <div class="output" id="decodedDetails"></div>  <script>
-    function generateCode() {
-      const code = document.getElementById('codeInput').value.trim();
-      const startInput = document.getElementById('startDateTime').value;
+  <textarea class="output" id="encodedOutput" rows="4" readonly></textarea>  <script>
+    function generateActivationCode() {
+      const deviceId = document.getElementById('deviceIdInput').value.trim();
       const endInput = document.getElementById('endDateTime').value;
+      const output = document.getElementById('encodedOutput');
 
-      if (!code || !startInput || !endInput) {
-        alert('يرجى إدخال الكود وتحديد وقتي البدء والانتهاء!');
+      if (!deviceId || !endInput) {
+        alert('يرجى إدخال معرف الجهاز ووقت الانتهاء');
         return;
       }
 
-      const startDate = new Date(startInput);
+      const startDate = new Date();
       const endDate = new Date(endInput);
 
       if (endDate <= startDate) {
-        alert('وقت الانتهاء يجب أن يكون بعد وقت البدء!');
+        alert('وقت الانتهاء يجب أن يكون بعد الوقت الحالي!');
         return;
       }
 
@@ -90,7 +81,8 @@
       const durationDays = +(durationMs / (1000 * 60 * 60 * 24)).toFixed(5);
 
       const payload = {
-        ActivationCode: code,
+        ActivationCode: generateUUID(),
+        device_id: deviceId,
         StartDate: startDate.toISOString(),
         EndDate: endDate.toISOString(),
         validDays: durationDays,
@@ -100,32 +92,14 @@
 
       const jsonStr = JSON.stringify(payload);
       const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
-      document.getElementById('encodedOutput').value = base64;
+      output.value = base64;
     }
 
-    function decodeCode() {
-      const input = document.getElementById('decodeInput').value.trim();
-      const output = document.getElementById('decodedDetails');
-      try {
-        const jsonStr = decodeURIComponent(escape(atob(input)));
-        const obj = JSON.parse(jsonStr);
-        const start = new Date(obj.StartDate);
-        const end = new Date(obj.EndDate);
-        const diffMs = end - start;
-        const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-        output.innerText =
-          `🔑 كود التفعيل: ${obj.ActivationCode}\n` +
-          `📅 وقت البدء: ${start.toLocaleString()}\n` +
-          `📅 وقت الانتهاء: ${end.toLocaleString()}\n` +
-          `⏳ مدة الكود: ${days} يوم، ${hours} ساعة، ${minutes} دقيقة\n` +
-          `🧾 رقم العنصر: ${obj.Item_id}\n` +
-          `🔐 رمز الشراء: ${obj.purchasecode}`;
-      } catch (e) {
-        output.innerText = '⚠️ الكود غير صالح أو غير قابل للتحليل.';
-      }
+    function generateUUID() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      }).toUpperCase();
     }
 
     function generateRandomToken(length) {
@@ -137,10 +111,8 @@
       return result;
     }
 
-    // تعبئة الوقت المبدئي
     const now = new Date();
-    const inOneHour = new Date(now.getTime() + 3600000);
-    document.getElementById('startDateTime').value = now.toISOString().slice(0,16);
-    document.getElementById('endDateTime').value = inOneHour.toISOString().slice(0,16);
+    const inOneDay = new Date(now.getTime() + 86400000);
+    document.getElementById('endDateTime').value = inOneDay.toISOString().slice(0, 16);
   </script></body>
 </html>
