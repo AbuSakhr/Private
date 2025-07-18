@@ -2,17 +2,23 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>مولد رموز الترخيص</title>
+  <title>توليد كود ترخيص</title>
+  <style>
+    body { font-family: sans-serif; direction: rtl; padding: 20px; }
+    input, button { margin: 10px 0; padding: 5px; font-size: 16px; }
+    pre { background: #f2f2f2; padding: 10px; white-space: pre-wrap; }
+  </style>
 </head>
 <body>
   <h1>توليد كود ترخيص</h1>
+
   <form id="form">
-    عدد الأيام: <input type="number" id="days" value="1"><br>
-    عدد الساعات: <input type="number" id="hours" value="0"><br>
+    <label>عدد الأيام: <input type="number" id="days" value="1"></label><br>
+    <label>عدد الساعات: <input type="number" id="hours" value="0"></label><br>
     <button type="submit">توليد</button>
   </form>
 
-  <pre id="output"></pre>
+  <pre id="output">🔑 عند توليد كود سيظهر هنا ...</pre>
 
   <script>
     document.getElementById('form').onsubmit = async (e) => {
@@ -25,9 +31,10 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ days, hours })
       });
+
       const data = await res.json();
       document.getElementById('output').innerText =
-        `🔑 الترخيص المشفر:\n${data.license}\n\n📅 التفاصيل:\n${JSON.stringify(data.details, null, 2)}`;
+        `🔐 كود الترخيص المشفر:\n${data.license}\n\n📋 تفاصيل الكود:\n${JSON.stringify(data.details, null, 2)}`;
     };
   </script>
 </body>
