@@ -1,82 +1,34 @@
-License Server API باستخدام Python Flask
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>مولد رموز الترخيص</title>
+</head>
+<body>
+  <h1>توليد كود ترخيص</h1>
+  <form id="form">
+    عدد الأيام: <input type="number" id="days" value="1"><br>
+    عدد الساعات: <input type="number" id="hours" value="0"><br>
+    <button type="submit">توليد</button>
+  </form>
 
-from flask import Flask, request, jsonify, send_from_directory from datetime import datetime, timedelta import uuid import os
+  <pre id="output"></pre>
 
-app = Flask(name, static_folder="static")
+  <script>
+    document.getElementById('form').onsubmit = async (e) => {
+      e.preventDefault();
+      const days = document.getElementById('days').value;
+      const hours = document.getElementById('hours').value;
 
-قاعدة بيانات مؤقتة في الذاكرة
-
-licenses = {}
-
-@app.route('/') def index(): return send_from_directory('static', 'admin.html')
-
-توليد كود ترخيص جديد
-
-@app.route('/api/generate', methods=['POST']) def generate_license(): data = request.json duration_days = data.get('days', 7)  # المدة الافتراضية 7 أيام
-
-code = str(uuid.uuid4()).upper()
-licenses[code] = {
-    'start_date': datetime.utcnow(),
-    'end_date': datetime.utcnow() + timedelta(days=duration_days),
-    'activated': False,
-    'device_id': None
-}
-
-return jsonify({
-    'license_code': code,
-    'valid_until': licenses[code]['end_date'].isoformat()
-})
-
-التحقق من كود التفعيل
-
-@app.route('/api/validate', methods=['POST']) def validate_license(): data = request.json code = data.get('code') device = data.get('device_id')
-
-if code not in licenses:
-    return jsonify({'status': 'invalid', 'message': 'License not found'}), 404
-
-license = licenses[code]
-
-if license['end_date'] < datetime.utcnow():
-    return jsonify({'status': 'expired', 'message': 'License expired'}), 403
-
-if license['device_id'] and license['device_id'] != device:
-    return jsonify({'status': 'denied', 'message': 'License already used on another device'}), 403
-
-return jsonify({
-    'status': 'valid',
-    'expires_at': license['end_date'].isoformat(),
-    'days_left': (license['end_date'] - datetime.utcnow()).days
-})
-
-تفعيل الكود
-
-@app.route('/api/activate', methods=['POST']) def activate_license(): data = request.json code = data.get('code') device = data.get('device_id')
-
-if code not in licenses:
-    return jsonify({'status': 'invalid', 'message': 'License not found'}), 404
-
-license = licenses[code]
-
-if license['activated'] and license['device_id'] != device:
-    return jsonify({'status': 'used', 'message': 'Code already used on another device'}), 403
-
-license['activated'] = True
-license['device_id'] = device
-
-return jsonify({'status': 'activated', 'code': code})
-
-فحص الحالة
-
-@app.route('/api/status/<code>', methods=['GET']) def status(code): if code not in licenses: return jsonify({'status': 'invalid'}), 404
-
-lic = licenses[code]
-return jsonify({
-    'code': code,
-    'start_date': lic['start_date'].isoformat(),
-    'end_date': lic['end_date'].isoformat(),
-    'activated': lic['activated'],
-    'device_id': lic['device_id']
-})
-
-if name == 'main': os.makedirs('static', exist_ok=True) app.run(debug=True, port=5000)
-
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days, hours })
+      });
+      const data = await res.json();
+      document.getElementById('output').innerText =
+        `🔑 الترخيص المشفر:\n${data.license}\n\n📅 التفاصيل:\n${JSON.stringify(data.details, null, 2)}`;
+    };
+  </script>
+</body>
+</html>
